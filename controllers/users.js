@@ -34,7 +34,6 @@ module.exports = {
   getUsers,
   getUserById,
   createUser,
+  editUser,
+  editAvatar,
 };
-// const getUsers = (req, res) => {
-//   res.send([]);
-// };
