@@ -26,7 +26,7 @@ const deleteCard = (req, res) => Card.findByIdAndRemove(req.params.cardId)
     if (card === null) {
       res.status(404).send({ message: `Карточка c id ${req.params.cardId} не найдена` });
     } else {
-      res.status(200).send();
+      res.status(200).send({ message: 'Карточка успешно удалена' });
     }
   })
   .catch((err) => {
@@ -66,7 +66,7 @@ const dislike = (req, res) => Card.findByIdAndUpdate(
     if (card === null) {
       res.status(404).send({ message: 'Передан несуществующий _id карточки.' });
     } else {
-      res.status(200).send();
+      res.status(200).send({ data: card });
     }
   })
   .catch((err) => {
