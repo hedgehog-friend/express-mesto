@@ -24,12 +24,18 @@ const createCard = (req, res) => {
 const deleteCard = (req, res) => Card.findByIdAndRemove(req.params.cardId)
   .then((card) => {
     if (card === null) {
-      res.status(404).send({ message: `Пользователь c id ${req.params.cardId} не найден` });
+      res.status(404).send({ message: `Карточка c id ${req.params.cardId} не найдена` });
     } else {
       res.status(200).send();
     }
   })
-  .catch((err) => res.status(500).send({ message: `Внутренняя ошибка сервера:${err}` }));
+  .catch((err) => {
+    if (err.name === 'CastError') {
+      res.status(400).send({ message: ' Переданы некорректные данные для удаления карточки.' });
+    } else {
+      res.status(500).send({ message: 'Внутренняя ошибка сервера' });
+    }
+  });
 
 const like = (req, res) => Card.findByIdAndUpdate(
   req.params.cardId,
@@ -56,7 +62,13 @@ const dislike = (req, res) => Card.findByIdAndUpdate(
   { $pull: { likes: req.user._id } },
   { new: true },
 )
-  .then(() => res.send())
+  .then((card) => {
+    if (card === null) {
+      res.status(404).send({ message: 'Передан несуществующий _id карточки.' });
+    } else {
+      res.status(200).send();
+    }
+  })
   .catch((err) => {
     if (err.name === 'CastError') {
       res.status(400).send({ message: ' Переданы некорректные данные для снятия лайка.' });
