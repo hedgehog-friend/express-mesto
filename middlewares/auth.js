@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-// middlewares/auth.js
 
 const auth = (req, res, next) => {
   const { authorization } = req.headers;
@@ -23,8 +22,8 @@ const auth = (req, res, next) => {
     return;
   }
 
-  req.user = payload; // записываем пейлоуд в объект запроса
-  next(); // пропускаем запрос дальше
+  req.user = payload;
+  next();
 };
 
 module.exports = {

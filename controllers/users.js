@@ -65,7 +65,6 @@ const login = (req, res) => {
         'de-beste-sleutel',
         { expiresIn: '7d' },
       );
-      // переписать в куках
       res.send({ token });
     })
     .catch((err) => {
