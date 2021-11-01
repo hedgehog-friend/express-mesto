@@ -21,13 +21,19 @@ const createCard = (req, res) => {
     });
 };
 
-const deleteCard = (req, res) => Card.findByIdAndRemove(req.params.cardId)
+const deleteCard = (req, res) => Card.findById(req.params.cardId)
   .then((card) => {
-    if (card === null) {
-      res.status(404).send({ message: `Карточка c id ${req.params.cardId} не найдена` });
-    } else {
-      res.status(200).send({ message: 'Карточка успешно удалена' });
+    if (card === null || card.owner.toString() !== req.user._id) {
+      return res.status(404).send({ message: `Карточка c id ${req.params.cardId} не найдена` });
     }
+    return Card.findByIdAndRemove(req.params.cardId)
+      .then((deletedCard) => {
+        if (deletedCard === null) {
+          res.status(404).send({ message: `Карточка c id ${req.params.cardId} не найдена` });
+        } else {
+          res.status(200).send({ message: 'Карточка успешно удалена' });
+        }
+      });
   })
   .catch((err) => {
     if (err.name === 'CastError') {

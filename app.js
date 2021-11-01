@@ -1,9 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
-const path = require('path');
+const { celebrate, Joi, errors } = require('celebrate');
+// const path = require('path');
 const routerUser = require('./routes/users');
 const routerCard = require('./routes/cards');
+const { login, createUser } = require('./controllers/users');
+const { auth } = require('./middlewares/auth');
 
 const { PORT = 3000 } = process.env;
 
@@ -13,17 +16,31 @@ mongoose.connect('mongodb://localhost:27017/mestodb ', {});
 
 app.use(express.json());
 app.use(helmet());
-app.use((req, res, next) => {
-  req.user = {
-    _id: '6175a2c8be10d83b453ae479', // вставьте сюда _id созданного в предыдущем пункте пользователя
-  };
+app.post('/signin', celebrate({
+  body: Joi.object().options({ abortEarly: false }).keys({
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).max(72).required(),
+  }),
+}), login);
 
-  next();
-});
-
+app.post('/signup', celebrate({
+  body: Joi.object().options({ abortEarly: false }).keys({
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).max(72).required(),
+    name: Joi.string().min(2).max(30),
+    about: Joi.string().min(2).max(30),
+    avatar: Joi.string().regex(/^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=[\]!$'()*,;]*)$/),
+  }),
+}), createUser);
+app.use(auth);
 app.use('/users', routerUser);
 app.use('/cards', routerCard);
 app.use('*', (req, res) => res.status(404).send({ message: 'Запрашиваемый ресурс не найден' }));
+app.use(errors());
+app.use((err, req, res, next) => {
+  console.log(err);
+  res.status(500).send({ message: 'На сервере произошла ошибка' });
+});
 
 app.listen(PORT, () => {
   console.log(`App listening on port ${PORT}`);
