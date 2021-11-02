@@ -35,8 +35,9 @@ app.post('/signup', celebrate({
 app.use(auth);
 app.use('/users', routerUser);
 app.use('/cards', routerCard);
-app.use('*', (req, res) => { throw new NotFoundError('Запрашиваемый ресурс не найден'); });
+app.use('*', () => { throw new NotFoundError('Запрашиваемый ресурс не найден'); });
 app.use(errors());
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.log(err);
   if (err.statusCode) {
