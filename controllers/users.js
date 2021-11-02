@@ -3,6 +3,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const User = require('../models/user');
+const BadRequestError = require('../errors/BadRequestError');
+const ConflictError = require('../errors/ConflictError');
+const ForbiddenError = require('../errors/ForbiddenError');
+const NotFoundError = require('../errors/NotFoundError');
+const UnauthorizedError = require('../errors/UnauthorizedError');
 
 const getUsers = (req, res) => User.find({})
   .then((users) => res.status(200).send(users))
@@ -10,30 +15,30 @@ const getUsers = (req, res) => User.find({})
     res.status(500).send({ message: 'Внутренняя ошибка сервера' });
   });
 
-const getUser = (userId, res) => User.findById(userId)
+const getUser = (userId, res, next) => User.findById(userId)
   .then((user) => {
     if (user === null) {
-      res.status(404).send({ message: `Пользователь c id ${userId} не найден` });
+      throw new NotFoundError(`Пользователь c id ${userId} не найден`);
     } else {
       res.status(200).send(user);
     }
   })
   .catch((err) => {
     if (err.name === 'ValidationError') {
-      res.status(400).send({ message: 'Переданы некорректные данные пользователя' });
+      next(new BadRequestError('Переданы некорректные данные пользователя'));
     } else {
-      res.status(500).send({ message: 'Внутренняя ошибка сервера' });
+      next(err);
     }
   });
 
-const getUserById = (req, res) => {
+const getUserById = (req, res, next) => {
   const { userId } = req.params;
-  return getUser(userId, res);
+  return getUser(userId, res, next);
 };
 
-const getCurrentUser = (req, res) => getUser(req.user._id, res);
+const getCurrentUser = (req, res, next) => getUser(req.user._id, res, next);
 
-const createUser = (req, res) => {
+const createUser = (req, res, next) => {
   const {
     email, password, name, about, avatar,
   } = req.body;
@@ -41,20 +46,24 @@ const createUser = (req, res) => {
     .then((hash) => User.create({
       email, password: hash, name, about, avatar,
     }))
-    .then((user) => res.send({ data: user }))
+    .then((user) => res.send({
+      data: {
+        email, name, about, avatar,
+      },
+    }))
     .catch((err) => {
       console.log(err);
       if (err.name === 'ValidationError') {
-        res.status(400).send({ message: 'Переданы некорректные данные при создании пользователя' });
+        next(new BadRequestError('Переданы некорректные данные при создании пользователя'));
       } else if (err.name === 'MongoServerError' && err.code === 11000) {
-        res.status(409).send({ message: 'Пользователь с такой электронной почтой уже зарегистрирован' });
+        next(new ConflictError('Пользователь с такой электронной почтой уже зарегистрирован'));
       } else {
-        res.status(500).send({ message: 'Внутренняя ошибка сервера' });
+        next(err);
       }
     });
 };
 
-const login = (req, res) => {
+const login = (req, res, next) => {
   const { email, password } = req.body;
   return User.findUserByCredentials(email, password)
     .then((user) => {
@@ -68,16 +77,15 @@ const login = (req, res) => {
       res.send({ token });
     })
     .catch((err) => {
-      if (err instanceof mongoose.Error.ValidationError || err instanceof Error) {
-        res.status(401).send({ message: `Произошла ошибка:${err}` });
+      if (err instanceof mongoose.Error.ValidationError) {
+        next(new UnauthorizedError('Переданы некорректные данные пользователя'));
       } else {
-        console.log(err);
-        res.status(500).send({ message: 'Внутренняя ошибка сервера' });
+        next(err);
       }
     });
 };
 
-const editUser = (req, res) => User.findByIdAndUpdate(
+const editUser = (req, res, next) => User.findByIdAndUpdate(
   req.user._id,
   { name: req.body.name, about: req.body.about },
   {
@@ -88,13 +96,13 @@ const editUser = (req, res) => User.findByIdAndUpdate(
   .then((user) => res.status(200).send({ data: user }))
   .catch((err) => {
     if (err instanceof mongoose.Error.ValidationError) {
-      res.status(400).send({ message: `Произошла ошибка: ${err}` });
+      next(new BadRequestError('Переданы некорректные данные пользователя'));
     } else {
-      res.status(500).send({ message: 'Внутренняя ошибка сервера' });
+      next(err);
     }
   });
 
-const editAvatar = (req, res) => User.findByIdAndUpdate(
+const editAvatar = (req, res, next) => User.findByIdAndUpdate(
   req.user._id,
   { avatar: req.body.avatar },
   {
@@ -105,9 +113,9 @@ const editAvatar = (req, res) => User.findByIdAndUpdate(
   .then((user) => res.status(200).send({ data: user }))
   .catch((err) => {
     if (err instanceof mongoose.Error.ValidationError) {
-      res.status(400).send({ message: `Произошла ошибка:${err}` });
+      next(new BadRequestError('Переданы некорректные данные пользователя'));
     } else {
-      res.status(500).send({ message: 'Внутренняя ошибка сервера' });
+      next(err);
     }
   });
 

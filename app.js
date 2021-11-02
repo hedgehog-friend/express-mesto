@@ -6,6 +6,7 @@ const routerUser = require('./routes/users');
 const routerCard = require('./routes/cards');
 const { login, createUser } = require('./controllers/users');
 const { auth } = require('./middlewares/auth');
+const NotFoundError = require('./errors/NotFoundError');
 
 const { PORT = 3000 } = process.env;
 
@@ -25,20 +26,24 @@ app.post('/signin', celebrate({
 app.post('/signup', celebrate({
   body: Joi.object().options({ abortEarly: false }).keys({
     email: Joi.string().email().required(),
-    password: Joi.string().min(8).max(72).required(),
-    name: Joi.string().min(2).max(30),
-    about: Joi.string().min(2).max(30),
+    password: Joi.string().min(8).max(32).required(),
+    name: Joi.string().min(2).max(32),
+    about: Joi.string().min(2).max(32),
     avatar: Joi.string().regex(/^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=[\]!$'()*,;]*)$/),
   }),
 }), createUser);
 app.use(auth);
 app.use('/users', routerUser);
 app.use('/cards', routerCard);
-app.use('*', (req, res) => res.status(404).send({ message: 'Запрашиваемый ресурс не найден' }));
+app.use('*', (req, res) => { throw new NotFoundError('Запрашиваемый ресурс не найден'); });
 app.use(errors());
 app.use((err, req, res, next) => {
   console.log(err);
-  res.status(500).send({ message: 'На сервере произошла ошибка' });
+  if (err.statusCode) {
+    res.status(err.statusCode).send({ message: err.message });
+  } else {
+    res.status(500).send({ message: 'На сервере произошла ошибка' });
+  }
 });
 
 app.listen(PORT, () => {
