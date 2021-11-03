@@ -2,6 +2,7 @@ const Card = require('../models/card');
 
 const BadRequestError = require('../errors/BadRequestError');
 const NotFoundError = require('../errors/NotFoundError');
+const ForbiddenError = require('../errors/ForbiddenError');
 
 const getCards = (req, res, next) => Card.find({})
   .then((cards) => {
@@ -29,7 +30,7 @@ const deleteCard = (req, res, next) => Card.findById(req.params.cardId)
     if (card === null) {
       throw new NotFoundError(`Карточка c id ${req.params.cardId} не найдена`);
     }
-    if (card.owner.toString() !== req.user._id) { throw new NotFoundError('Нельзя удалять карточку, принадлежащую другому пользователю'); }
+    if (card.owner.toString() !== req.user._id) { throw new ForbiddenError('Нельзя удалять карточку, принадлежащую другому пользователю'); }
     return Card.findByIdAndRemove(req.params.cardId)
       .then((deletedCard) => {
         if (deletedCard === null) {
@@ -74,7 +75,7 @@ const dislike = (req, res, next) => Card.findByIdAndUpdate(
 )
   .then((card) => {
     if (card === null) {
-      res.status(404).send({ message: 'Передан несуществующий _id карточки.' });
+      throw new NotFoundError('Передан несуществующий _id карточки.');
     } else {
       res.status(200).send({ data: card });
     }

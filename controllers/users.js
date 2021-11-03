@@ -5,14 +5,13 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const BadRequestError = require('../errors/BadRequestError');
 const ConflictError = require('../errors/ConflictError');
-const ForbiddenError = require('../errors/ForbiddenError');
 const NotFoundError = require('../errors/NotFoundError');
 const UnauthorizedError = require('../errors/UnauthorizedError');
 
-const getUsers = (req, res) => User.find({})
+const getUsers = (req, res, next) => User.find({})
   .then((users) => res.status(200).send(users))
   .catch((err) => {
-    res.status(500).send({ message: 'Внутренняя ошибка сервера' });
+    next(err);
   });
 
 const getUser = (userId, res, next) => User.findById(userId)
@@ -46,7 +45,7 @@ const createUser = (req, res, next) => {
     .then((hash) => User.create({
       email, password: hash, name, about, avatar,
     }))
-    .then((user) => res.send({
+    .then(() => res.send({
       data: {
         email, name, about, avatar,
       },
